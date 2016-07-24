@@ -1,0 +1,229 @@
+<h3 id="linkedin-data-scraping-with-beautifulsoup">Linkedin Data scraping with BeautifulSoup</h3>
+<p>Today I would like to do some web scraping of Linkedin job postings, I have two
+ways to go:
+ - Source code extraction
+ - Using the Linkedin API</p>
+
+<p>I chose the first option, mainly because the API is poorly documented and I
+wanted to experiment with BeautifulSoup.
+BeautifulSoup in few words is a library that parses HTML pages and makes it easy
+to extract the data.</p>
+
+<p>Official page: https://www.crummy.com/software/BeautifulSoup/</p>
+
+<p><strong>In [15]:</strong></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c">## Main packages needed are ulrlib2 to make url queries and beautifulSoup to structure the results</span>
+<span class="c">## the imports needed for this experiment</span>
+<span class="kn">from</span> <span class="nn">bs4</span> <span class="kn">import</span> <span class="n">BeautifulSoup</span>
+<span class="kn">import</span> <span class="nn">urllib2</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="kn">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="c"># get source code of the page</span>
+<span class="k">def</span> <span class="nf">get_url</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+<span class="c"># makes the source  tree format like </span>
+<span class="k">def</span> <span class="nf">beautify</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+    <span class="n">source</span> <span class="o">=</span> <span class="n">get_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">source</span><span class="p">,</span><span class="s">&quot;html.parser&quot;</span><span class="p">)</span></code></pre></figure>
+
+<p>Now that the functions are defined and libraries are imported, I’ll get job
+postings of linkedin
+The inspection of the source code of the page shows indications where to access
+elements we are interested in
+I basically achieved that by ‘inspecting elements’ using the browser.
+I will look for “Data scientist” postings. Note that I’ll keep the quotes in my
+search because otherwise I’ll get unrelevant postings containing the words
+“Data” and “Scientist”.
+Below we are only interested to find div element with class ‘results-context’,
+which contains summary of the search, especially the number of items found.</p>
+
+<p><strong>In [2]:</strong></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">jobs</span> <span class="o">=</span> <span class="n">beautify</span><span class="p">(</span><span class="s">&#39;https://www.linkedin.com/jobs/search?keywords=%22Data+Scientist%22&amp;&#39;</span>
+                <span class="s">&#39;location=France&amp;trk=jobs_jserp_search_button_execute&amp;orig=JSERP&amp;locationId=fr%3A0&#39;</span><span class="p">)</span>
+
+<span class="n">results_context</span> <span class="o">=</span> <span class="n">jobs</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;div&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;class&#39;</span> <span class="p">:</span> <span class="s">&#39;results-context&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;strong&#39;</span><span class="p">)</span>
+<span class="n">n_jobs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">results_context</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">,</span><span class="s">&#39;&#39;</span><span class="p">))</span> 
+<span class="k">print</span> <span class="s">&quot;###### Number of job postings #######&quot;</span>
+<span class="k">print</span> <span class="n">n_jobs</span>
+<span class="k">print</span> <span class="s">&quot;#####################################&quot;</span></code></pre></figure>
+
+<pre><code>###### Number of job postings #######
+93
+#####################################
+</code></pre>
+
+<p>Now let’s check the number of postings we got on one page</p>
+
+<p><strong>In [3]:</strong></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">results</span> <span class="o">=</span> <span class="n">jobs</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;li&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;class&#39;</span><span class="p">:</span> <span class="s">&#39;job-listing&#39;</span><span class="p">})</span>
+<span class="n">n_postings</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+<span class="k">print</span> <span class="s">&quot;#### Number of job postings per page ####&quot;</span>
+<span class="k">print</span> <span class="n">n_postings</span>
+<span class="k">print</span> <span class="s">&quot;#########################################&quot;</span></code></pre></figure>
+
+<pre><code>#### Number of job postings per page ####
+25
+#########################################
+</code></pre>
+
+<p><strong>In [4]:</strong></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">print</span> <span class="s">&quot;#### Number of pages ####&quot;</span>
+<span class="n">n_pages</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">n_jobs</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">n_postings</span><span class="p">)))</span>
+<span class="k">print</span> <span class="n">n_pages</span>
+<span class="k">print</span> <span class="s">&quot;#########################&quot;</span></code></pre></figure>
+
+<pre><code>#### Number of pages ####
+4
+#########################
+</code></pre>
+
+<p>To be able to extract all postings, I need to iterate over the pages, therefore
+I will proceed with examining the urls of the different pages to work out the
+logic.</p>
+
+<p>url of the first page
+- https://www.linkedin.com/jobs/search?keywords=Data+Scientist&amp;locationId=fr:0&amp;s
+tart=0&amp;count=25&amp;trk=jobs_jserp_pagination_1</p>
+
+<p>second page
+- https://www.linkedin.com/jobs/search?keywords=Data+Scientist&amp;locationId=fr:0&amp;s
+tart=25&amp;count=25&amp;trk=jobs_jserp_pagination_2</p>
+
+<p>third page
+- https://www.linkedin.com/jobs/search?keywords=Data+Scientist&amp;locationId=fr:0&amp;s
+tart=50&amp;count=25&amp;trk=jobs_jserp_pagination_3</p>
+
+<p>there are two elements changing :
+- start=25 which is a product of page number and 25
+- trk=jobs_jserp_pagination_3</p>
+
+<p>I also noticed that the pagination number doesn’t have to be changed to go to
+next page, which means I can change only start value to get the next postings
+(may be Linkedin developers should do something about it …)</p>
+
+<p><strong>In [68]:</strong></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">titles</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">companies</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">locations</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">links</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="c">#loop over all pages to get the posting details</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_pages</span><span class="p">):</span>    
+    <span class="c"># define the base url for generic searching </span>
+    <span class="n">url</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;http://www.linkedin.com/jobs/search?keywords=%22Data+Scientist%22&amp;locationId=&quot;</span>
+    <span class="s">&quot;fr:0&amp;start=nPostings&amp;count=25&amp;trk=jobs_jserp_pagination_1&quot;</span><span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">url</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;nPostings&#39;</span><span class="p">,</span><span class="nb">str</span><span class="p">(</span><span class="mi">25</span><span class="o">*</span><span class="n">i</span><span class="p">))</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">beautify</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="c"># Build lists for each type of information</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="s">&#39;li&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;class&#39;</span><span class="p">:</span> <span class="s">&#39;job-listing&#39;</span><span class="p">})</span>
+    <span class="n">results</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="c"># print &quot;there are &quot;, len(results) , &quot; results&quot;</span>
+    <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+        <span class="c"># set only the value if get_text() </span>
+        <span class="n">titles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">h2</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">span</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span> <span class="k">if</span> <span class="n">res</span><span class="o">.</span><span class="n">h2</span><span class="o">.</span><span class="n">a</span><span class="o">.</span><span class="n">span</span> <span class="k">else</span> <span class="s">&#39;None&#39;</span><span class="p">)</span>
+        <span class="n">companies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">res</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,{</span><span class="s">&#39;class&#39;</span> <span class="p">:</span> <span class="s">&#39;company-name-text&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span> <span class="k">if</span>
+                         <span class="n">res</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,{</span><span class="s">&#39;class&#39;</span> <span class="p">:</span> <span class="s">&#39;company-name-text&#39;</span><span class="p">})</span> <span class="k">else</span> <span class="s">&#39;None&#39;</span><span class="p">)</span>
+        <span class="n">locations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">res</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;class&#39;</span> <span class="p">:</span> <span class="s">&#39;job-location&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span> <span class="k">if</span>
+                        <span class="n">res</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;span&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;class&#39;</span> <span class="p">:</span> <span class="s">&#39;job-location&#39;</span><span class="p">})</span> <span class="k">else</span> <span class="s">&#39;None&#39;</span> <span class="p">)</span>
+        <span class="n">links</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;a&#39;</span><span class="p">,{</span><span class="s">&#39;class&#39;</span> <span class="p">:</span> <span class="s">&#39;job-title-link&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;href&#39;</span><span class="p">)</span> <span class="p">)</span></code></pre></figure>
+
+<p>As I mentioned above, all the information about where to find the job details
+are made easy thanks to source code viewing via any browser</p>
+
+<p>Next, it’s time to create the data frame</p>
+
+<p><strong>In [6]:</strong></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">jobs_linkedin</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">&#39;title&#39;</span> <span class="p">:</span> <span class="n">titles</span><span class="p">,</span> <span class="s">&#39;company&#39;</span><span class="p">:</span> <span class="n">companies</span><span class="p">,</span> <span class="s">&#39;location&#39;</span><span class="p">:</span> <span class="n">locations</span><span class="p">,</span> <span class="s">&#39;link&#39;</span> <span class="p">:</span> <span class="n">links</span><span class="p">})</span></code></pre></figure>
+
+<p>Now the table is filled with the above columns</p>
+
+<p><strong>In [7]:</strong></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">jobs_linkedin</span><span class="o">.</span><span class="n">head</span><span class="p">()</span></code></pre></figure>
+
+<div>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>company</th>
+      <th>link</th>
+      <th>location</th>
+      <th>title</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Think Big, a Teradata Company</td>
+      <td>https://www.linkedin.com/jobs/view/108056467?t...</td>
+      <td>Antony, Île-de-France, France</td>
+      <td>Data Scientist - Antony France</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Disneyland Paris</td>
+      <td>https://www.linkedin.com/jobs/view/136713421?t...</td>
+      <td>Paris Area, France</td>
+      <td>Data Scientist (Consultant Décisionnel) F/H</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Allianz France</td>
+      <td>https://www.linkedin.com/jobs/view/138523107?t...</td>
+      <td>Région de Paris , France</td>
+      <td>DATA SCIENTIST CONFIRME (E)</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>EY</td>
+      <td>https://www.linkedin.com/jobs/view/136739066?t...</td>
+      <td>Paris La Défense Cedex(FR065)</td>
+      <td>Consultant Expérimenté Analytics / Data Scient...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>AXA en France</td>
+      <td>https://www.linkedin.com/jobs/view/103223747?t...</td>
+      <td>Nanterre, Île-de-France, France</td>
+      <td>Data Scientist sénior F/H</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>Just to verify, I can check the size of the table to make sure I got all the
+postings</p>
+
+<p><strong>In [67]:</strong></p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">jobs_linkedin</span><span class="o">.</span><span class="n">count</span><span class="p">()</span></code></pre></figure>
+
+<pre><code>company     93
+link        93
+location    93
+title       93
+dtype: int64
+</code></pre>
+
+<p>Finally, I got an actual dataset just by scraping web pages. Gathering data
+never have been as easy.
+I can even go further by parsing the description of each posting page and
+extract information like
+- Level
+- Description
+- Technologies
+…</p>
+
+<p>There are no limits to which extent we can exploit the information in HTML pages
+thanks to BeautifulSoup, you just have to read the documentation which is very
+good by the way, and get to practice on real pages.</p>
+
+<p>Ciao!</p>
